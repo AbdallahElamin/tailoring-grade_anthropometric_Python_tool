@@ -129,11 +129,15 @@ class MeasurementEngine:
         try:
             measurer = MeasureBody(model_type)
             # from_verts accepts metres; SMPL-Anthropometry converts internally
-            measurer.from_verts(verts=tpose_vertices)
+            import torch
+            verts_tensor = torch.from_numpy(tpose_vertices).float()
+            measurer.from_verts(verts=verts_tensor)
             all_names = measurer.all_possible_measurements
             measurer.measure(all_names)
             measurer.label_measurements(STANDARD_LABELS)
         except Exception as exc:
+            import traceback
+            traceback.print_exc()
             raise MeasurementError(
                 f"SMPL-Anthropometry measurement extraction failed: {exc}"
             ) from exc
@@ -157,7 +161,7 @@ class MeasurementEngine:
 
         # Re-map to human-readable snake_case keys
         result: Dict[str, float] = {}
-        labeled: Dict[str, str] = measurer.labeled_measurements  # {label: name}
+        labeled: Dict[str, str] = measurer.labels2names  # {label: name}
         for label, name in labeled.items():
             key = _LABEL_TO_KEY.get(label, name.replace(" ", "_").lower())
             if name in scaled:

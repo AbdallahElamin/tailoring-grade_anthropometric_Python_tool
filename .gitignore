@@ -16,19 +16,24 @@ build/
 env/
 venv/
 .venv/
+.venv_311/
 pip-wheel-metadata/
 
 # ── Model files (large binary files — must be downloaded manually) ────────────
+data/smplx/*.pkl
 models/smplx/*.npz
-models/smplx/*.pkl
-models/smpl/*.pkl
+models/smplx/smplx/*.npz
 
 # ── Third-party repos (cloned separately) ────────────────────────────────────
 third_party/SMPL-Anthropometry/
 
 # ── Output / debug artifacts ──────────────────────────────────────────────────
-output/
 *.obj
+front_pose.jpg
+side_pose.jpg
+result.json
+data/smpl/smpl_body_parts_2_faces.json
+data/smplx/smplx_body_parts_2_faces.json
 
 # ── Testing ───────────────────────────────────────────────────────────────────
 .pytest_cache/
