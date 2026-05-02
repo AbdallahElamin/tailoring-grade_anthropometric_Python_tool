@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Optional, Protocol, runtime_checkable
 
 import cv2
@@ -116,48 +117,76 @@ class PoseEstimator(Protocol):
 
 # ── MediaPipe implementation ──────────────────────────────────────────────────
 
+# Default model path (relative to project root, downloaded once)
+_DEFAULT_TASK_MODEL = (
+    Path(__file__).parent.parent.parent / "models" / "mediapipe" / "pose_landmarker_heavy.task"
+)
+
+
 class MediapipePoseEstimator:
     """
     Google MediaPipe Pose estimator.
+
+    Uses the MediaPipe Tasks ``PoseLandmarker`` API (mediapipe ≥ 0.10.30).
+    A ``pose_landmarker_heavy.task`` model file must be present at
+    ``models/mediapipe/pose_landmarker_heavy.task`` (downloaded automatically
+    by the setup step, or manually from the MediaPipe model zoo).
 
     Parameters
     ----------
     config:
         Pipeline configuration (provides ``min_keypoint_visibility``).
-    model_complexity:
-        MediaPipe model complexity: 0 (fastest), 1 (balanced), 2 (most accurate).
+    model_path:
+        Path to the ``.task`` bundle.  Defaults to
+        ``models/mediapipe/pose_landmarker_heavy.task``.
     """
 
     def __init__(
         self,
         config: PipelineConfig,
-        model_complexity: int = 2,
+        model_path: Optional[Path] = None,
     ) -> None:
         self._cfg = config
-        self._model_complexity = model_complexity
-        self._pose = None  # lazy-loaded
+        self._model_path = Path(model_path) if model_path else _DEFAULT_TASK_MODEL
+        self._landmarker = None  # lazy-loaded
 
-    def _get_pose(self):
-        """Lazily initialise the MediaPipe Pose solution."""
-        if self._pose is None:
+    def _get_landmarker(self):
+        """Lazily initialise the MediaPipe PoseLandmarker."""
+        if self._landmarker is None:
             try:
                 import mediapipe as mp
-                self._pose = mp.solutions.pose.Pose(
-                    static_image_mode=True,
-                    model_complexity=self._model_complexity,
-                    enable_segmentation=True,
-                    min_detection_confidence=0.5,
+                from mediapipe.tasks.python import vision as mp_vision
+                from mediapipe.tasks.python.core.base_options import BaseOptions
+
+                if not self._model_path.exists():
+                    raise PoseEstimationError(
+                        f"MediaPipe model not found at: {self._model_path}\n"
+                        "Download it with:\n"
+                        "  Invoke-WebRequest -Uri https://storage.googleapis.com/mediapipe-models/"
+                        "pose_landmarker/pose_landmarker_heavy/float16/latest/pose_landmarker_heavy.task "
+                        "-OutFile models/mediapipe/pose_landmarker_heavy.task"
+                    )
+
+                options = mp_vision.PoseLandmarkerOptions(
+                    base_options=BaseOptions(model_asset_path=str(self._model_path)),
+                    running_mode=mp_vision.RunningMode.IMAGE,
+                    num_poses=1,
+                    min_pose_detection_confidence=0.5,
+                    min_pose_presence_confidence=0.5,
+                    min_tracking_confidence=0.5,
+                    output_segmentation_masks=True,
                 )
-                logger.debug("MediaPipe Pose initialised (complexity=%d).", self._model_complexity)
+                self._landmarker = mp_vision.PoseLandmarker.create_from_options(options)
+                logger.debug("MediaPipe PoseLandmarker initialised from %s.", self._model_path)
             except ImportError as exc:
                 raise PoseEstimationError(
                     "mediapipe is not installed. Run: pip install mediapipe"
                 ) from exc
-        return self._pose
+        return self._landmarker
 
     def estimate(self, image: np.ndarray) -> PoseResult:
         """
-        Run MediaPipe Pose on a single RGB image.
+        Run MediaPipe PoseLandmarker on a single RGB image.
 
         Parameters
         ----------
@@ -174,22 +203,32 @@ class MediapipePoseEstimator:
             If no person is detected or fewer than ``min_visible_body_keypoints``
             landmarks have sufficient confidence.
         """
-        h, w = image.shape[:2]
-        pose = self._get_pose()
-        results = pose.process(image)
+        import mediapipe as mp
 
-        if results.pose_landmarks is None:
+        h, w = image.shape[:2]
+        landmarker = self._get_landmarker()
+
+        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=image)
+        results = landmarker.detect(mp_image)
+
+        if not results.pose_landmarks:
             raise PoseEstimationError(
                 "MediaPipe Pose: no person detected in image. "
                 "Ensure the person is fully visible and the image is well-lit."
             )
 
-        lm = results.pose_landmarks.landmark
+        lm = results.pose_landmarks[0]  # first (and only) person
         keypoints_norm = np.array([[p.x, p.y] for p in lm], dtype=np.float32)
-        visibility = np.array([p.visibility for p in lm], dtype=np.float32)
+        visibility = np.array(
+            [p.visibility if p.visibility is not None else 0.0 for p in lm],
+            dtype=np.float32,
+        )
         keypoints_px = keypoints_norm * np.array([w, h], dtype=np.float32)
 
-        # Quality score: fraction of landmarks with visibility ≥ threshold
+        # Store segmentation mask on self for the segmentor to reuse
+        self._last_segmentation_masks = results.segmentation_masks
+
+        # Quality score: fraction of landmarks with visibility >= threshold
         vis_thresh = self._cfg.min_keypoint_visibility
         n_visible = int((visibility >= vis_thresh).sum())
         quality_score = round(n_visible / len(lm), 3)
@@ -224,9 +263,9 @@ class MediapipePoseEstimator:
 
     def close(self) -> None:
         """Release MediaPipe resources."""
-        if self._pose is not None:
-            self._pose.close()
-            self._pose = None
+        if self._landmarker is not None:
+            self._landmarker.close()
+            self._landmarker = None
 
 
 # ── Stub implementation (for testing) ────────────────────────────────────────

@@ -32,7 +32,7 @@ from tailorvision.pipeline import TailorVisionPipeline
 @click.group()
 @click.version_option("0.1.0", prog_name="tailor-vision")
 def cli() -> None:
-    """TailorVision — anthropometric body measurement for garment tailoring."""
+    """TailorVision -- anthropometric body measurement for garment tailoring."""
 
 
 @cli.command("measure")
@@ -86,38 +86,38 @@ def measure(
         pipeline = TailorVisionPipeline(config)
         result   = pipeline.run(front, side)
     except TailorVisionError as exc:
-        click.secho(f"✗ Pipeline error: {exc}", fg="red", err=True)
+        click.secho(f"[FAIL] Pipeline error: {exc}", fg="red", err=True)
         sys.exit(1)
     except Exception as exc:
-        click.secho(f"✗ Unexpected error: {exc}", fg="red", err=True)
+        click.secho(f"[FAIL] Unexpected error: {exc}", fg="red", err=True)
         raise
 
     # Print measurements table
-    click.secho("\n── Body Measurements ──", bold=True)
+    click.secho("\n-- Body Measurements --", bold=True)
     for name, val in result.measurements_cm.items():
         conf = result.measurement_confidence.get(name, "?")
         unc  = result.uncertainty_cm.get(name, 0.0)
-        label = f"{name:<35} {val:>7.1f} cm  ±{unc:.1f}  [{conf}]"
+        label = f"  {name:<35} {val:>7.1f} cm  +/-{unc:.1f}  [{conf}]"
         color = "green" if str(conf) == "HIGH" else ("yellow" if str(conf) == "MEDIUM" else "red")
         click.secho(label, fg=color)
 
-    click.secho("\n── Tailoring Recommendations ──", bold=True)
+    click.secho("\n-- Tailoring Recommendations --", bold=True)
     rec = result.tailoring_recommendations
     for field, val in rec.model_dump().items():
         if isinstance(val, (int, float)) and val:
             click.echo(f"  {field:<35} {val:.1f} cm")
 
     if result.warnings:
-        click.secho("\n── Warnings ──", bold=True, fg="yellow")
+        click.secho("\n-- Warnings --", bold=True, fg="yellow")
         for w in result.warnings:
-            click.secho(f"  ⚠  {w.value}", fg="yellow")
+            click.secho(f"  [!] {w.value}", fg="yellow")
 
-    click.secho(f"\n── Overall Quality: {result.quality_scores.overall:.2f} ──", bold=True)
+    click.secho(f"\n-- Overall Quality: {result.quality_scores.overall:.2f} --", bold=True)
 
     # Save JSON
     out_path = Path(output) if output else config.output_path("result.json")
     result.save_json(out_path)
-    click.secho(f"\n✓ Full result saved → {out_path}", fg="green")
+    click.secho(f"\n[OK] Full result saved -> {out_path}", fg="green")
 
 
 def main() -> None:

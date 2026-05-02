@@ -61,7 +61,7 @@ class TailorVisionPipeline:
         # Instantiate all engines (lazy where expensive)
         self._gate        = QualityGate(self._cfg)
         self._pose_est    = MediapipePoseEstimator(self._cfg)
-        self._segmentor   = MediapipeSegmentor(self._cfg)
+        self._segmentor   = MediapipeSegmentor(self._cfg, pose_estimator=self._pose_est)
         self._lifter      = KeypointLifter(self._cfg)
         self._adapter     = BodyModelAdapter(self._cfg)
         self._fitter      = PoseFitEngine(self._cfg, self._adapter)

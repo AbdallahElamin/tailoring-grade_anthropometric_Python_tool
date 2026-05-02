@@ -65,43 +65,29 @@ class MediapipeSegmentor:
     """
     MediaPipe-based body segmentation.
 
-    Reuses the segmentation output from a MediaPipe Pose run rather than
-    running a separate model, making it essentially free when pose
-    estimation has already been performed.
+    Reuses the segmentation mask produced by ``MediapipePoseEstimator``
+    (which already requests ``output_segmentation_masks=True``) rather
+    than running a separate model.  If the pose estimator produced a mask
+    it is stored in ``pose_estimator._last_segmentation_masks`` and this
+    class reads it directly.  When used standalone (e.g. in tests) it
+    falls back to running a fresh ``PoseLandmarker`` detection.
 
     Parameters
     ----------
     config:
         Pipeline configuration.
-    model_complexity:
-        MediaPipe model complexity (0, 1, or 2).  Match this to the value
-        used in ``MediapipePoseEstimator`` for consistent results.
+    pose_estimator:
+        The ``MediapipePoseEstimator`` instance to reuse masks from.
+        Pass ``None`` to run standalone.
     """
 
-    def __init__(self, config: PipelineConfig, model_complexity: int = 2) -> None:
+    def __init__(self, config: PipelineConfig, pose_estimator=None) -> None:
         self._cfg = config
-        self._model_complexity = model_complexity
-        self._pose = None
-
-    def _get_pose(self):
-        if self._pose is None:
-            try:
-                import mediapipe as mp
-                self._pose = mp.solutions.pose.Pose(
-                    static_image_mode=True,
-                    model_complexity=self._model_complexity,
-                    enable_segmentation=True,
-                    min_detection_confidence=0.5,
-                )
-            except ImportError as exc:
-                raise SegmentationError(
-                    "mediapipe is not installed. Run: pip install mediapipe"
-                ) from exc
-        return self._pose
+        self._pose_est = pose_estimator
 
     def segment(self, image: np.ndarray) -> SegmentationResult:
         """
-        Segment the person from the background.
+        Extract the person segmentation mask.
 
         Parameters
         ----------
@@ -115,21 +101,58 @@ class MediapipeSegmentor:
         Raises
         ------
         SegmentationError
-            If MediaPipe cannot detect a person in the image.
+            If no mask can be obtained.
         """
-        pose = self._get_pose()
-        results = pose.process(image)
+        h, w = image.shape[:2]
+        raw_mask_np: Optional[np.ndarray] = None
 
-        if results.segmentation_mask is None:
+        # --- Try to reuse mask from pose estimator (most efficient path) -----
+        if self._pose_est is not None:
+            masks = getattr(self._pose_est, "_last_segmentation_masks", None)
+            if masks and len(masks) > 0:
+                raw_mask_np = masks[0].numpy_view().copy()  # (H, W) float32
+
+        # --- Fallback: run pose landmarker ourselves --------------------------
+        if raw_mask_np is None:
+            try:
+                import mediapipe as mp
+                from mediapipe.tasks.python import vision as mp_vision
+                from mediapipe.tasks.python.core.base_options import BaseOptions
+                from pathlib import Path
+
+                model_path = (
+                    Path(__file__).parent.parent.parent
+                    / "models" / "mediapipe" / "pose_landmarker_heavy.task"
+                )
+                if not model_path.exists():
+                    raise SegmentationError(
+                        f"MediaPipe model not found at: {model_path}\n"
+                        "Download pose_landmarker_heavy.task first."
+                    )
+                options = mp_vision.PoseLandmarkerOptions(
+                    base_options=BaseOptions(model_asset_path=str(model_path)),
+                    running_mode=mp_vision.RunningMode.IMAGE,
+                    num_poses=1,
+                    output_segmentation_masks=True,
+                )
+                landmarker = mp_vision.PoseLandmarker.create_from_options(options)
+                mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=image)
+                results = landmarker.detect(mp_image)
+                landmarker.close()
+                if results.segmentation_masks and len(results.segmentation_masks) > 0:
+                    raw_mask_np = results.segmentation_masks[0].numpy_view().copy()
+            except ImportError as exc:
+                raise SegmentationError(
+                    "mediapipe is not installed. Run: pip install mediapipe"
+                ) from exc
+
+        if raw_mask_np is None:
             raise SegmentationError(
                 "MediaPipe segmentation returned no mask. "
                 "Ensure the person is clearly visible."
             )
 
-        # raw_mask: (H, W) float32 in [0, 1] — probability of being person
-        raw_mask = results.segmentation_mask
-        h, w = raw_mask.shape
-        binary_mask = raw_mask > 0.5
+        binary_mask = raw_mask_np > 0.5
 
         # Morphological clean-up to remove noisy speckles
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 9))
@@ -138,7 +161,7 @@ class MediapipeSegmentor:
         binary_mask_uint8 = cv2.morphologyEx(binary_mask_uint8, cv2.MORPH_OPEN, kernel)
         binary_mask = binary_mask_uint8 > 127
 
-        person_pixels = raw_mask[binary_mask]
+        person_pixels = raw_mask_np[binary_mask]
         confidence = float(person_pixels.mean()) if person_pixels.size > 0 else 0.0
         area_fraction = float(binary_mask.sum()) / float(h * w)
         contour_height = self._contour_pixel_height(binary_mask)
@@ -164,9 +187,7 @@ class MediapipeSegmentor:
         return float(rows_with_person[-1] - rows_with_person[0])
 
     def close(self) -> None:
-        if self._pose is not None:
-            self._pose.close()
-            self._pose = None
+        pass  # nothing to release (pose estimator manages its own lifecycle)
 
 
 class StubSegmentor:
