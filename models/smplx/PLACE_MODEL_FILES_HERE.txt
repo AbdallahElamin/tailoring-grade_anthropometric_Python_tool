@@ -1,0 +1,12 @@
+# Place your SMPL-X model files here.
+#
+# Required files (download from https://smpl-x.is.tue.mpg.de after free registration):
+#
+#   models/
+#   └── smplx/
+#       ├── SMPLX_MALE.npz
+#       ├── SMPLX_FEMALE.npz
+#       └── SMPLX_NEUTRAL.npz
+#
+# The pipeline will raise BodyModelNotFoundError with a clear message
+# if these files are missing when the fitting stage runs.

@@ -1,0 +1,15 @@
+# Place the SMPL-Anthropometry repository here.
+#
+# Run once:
+#   git clone https://github.com/DavidBoja/SMPL-Anthropometry third_party/SMPL-Anthropometry
+#
+# The MeasurementEngine will automatically add this directory to sys.path
+# so that `from measure import MeasureBody` works at runtime.
+#
+# Additionally, copy the SMPL-X model data files into:
+#   third_party/SMPL-Anthropometry/data/smplx/
+#       SMPLX_MALE.pkl
+#       SMPLX_FEMALE.pkl
+#       SMPLX_NEUTRAL.pkl
+#
+# (These are the .pkl versions, separate from the .npz files used by smplx.)

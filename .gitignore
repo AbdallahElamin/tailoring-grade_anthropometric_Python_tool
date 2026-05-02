@@ -1,0 +1,45 @@
+# TailorVision .gitignore
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.so
+*.dylib
+.Python
+env/
+venv/
+.venv/
+pip-wheel-metadata/
+
+# ── Model files (large binary files — must be downloaded manually) ────────────
+models/smplx/*.npz
+models/smplx/*.pkl
+models/smpl/*.pkl
+
+# ── Third-party repos (cloned separately) ────────────────────────────────────
+third_party/SMPL-Anthropometry/
+
+# ── Output / debug artifacts ──────────────────────────────────────────────────
+output/
+*.obj
+
+# ── Testing ───────────────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ── IDEs ─────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+
+# ── OS ───────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
