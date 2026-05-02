@@ -88,6 +88,43 @@ The measurement engine automatically adds this to `sys.path` at runtime.
 
 ---
 
+## Quick Start: End-to-End Client Testing
+
+To get up and running quickly using the included client sample images, follow these steps:
+
+**1. Clone the repository and install dependencies:**
+```bash
+git clone https://github.com/your-org/tailorvision
+cd tailorvision
+pip install -r requirements.txt
+```
+
+**2. Setup third-party modules:**
+```bash
+git clone https://github.com/DavidBoja/SMPL-Anthropometry third_party/SMPL-Anthropometry
+```
+
+**3. Download SMPL-X models:**
+Download the SMPL-X models from https://smpl-x.is.tue.mpg.de and place them in the `models/smplx/` directory.
+
+**4. Run the Measurement Pipeline:**
+Use the provided `sample1` images (height 136 cm) to test the CLI:
+```bash
+python -m tailorvision measure \
+  --front imges/sample1_front.jpg \
+  --side imges/sample1_side.jpg \
+  --height 136 \
+  --gender male \
+  --garment traditional \
+  --output output_sample1.json \
+  --verbose
+```
+
+**5. View the output:**
+The pipeline will generate an `output_sample1.json` file containing the precise anthropometric measurements and tailoring ease recommendations!
+
+---
+
 ## Usage
 
 ### Python API
@@ -96,43 +133,44 @@ The measurement engine automatically adds this to `sys.path` at runtime.
 from tailorvision import TailorVisionPipeline, PipelineConfig
 
 config = PipelineConfig(
-    known_height_cm=175.0,   # optional but improves accuracy significantly
+    known_height_cm=136.0,   # optional but improves accuracy significantly
     gender="male",
     garment_type="traditional",
 )
 
 pipeline = TailorVisionPipeline(config)
-result = pipeline.run("client_front.jpg", "client_side.jpg")
+# Using the provided sample images in the 'imges/' directory
+result = pipeline.run("imges/sample1_front.jpg", "imges/sample1_side.jpg")
 
 # Access measurements
 print(result.measurements_cm)
-# {'height': 175.0, 'chest_circumference': 96.4, 'waist_circumference': 82.1, ...}
+# {'height': 136.0, 'chest_circumference': 78.4, 'waist_circumference': 72.1, ...}
 
 # Access tailoring recommendations
 print(result.tailoring_recommendations.chest_with_ease_cm)
-# 108.4
+# 90.4
 
 # Save as JSON
-result.save_json("output/client_001.json")
+result.save_json("output_sample1.json")
 ```
 
 ### CLI
 
 ```bash
 tailor-vision measure \
-  --front  client_front.jpg \
-  --side   client_side.jpg \
-  --height 175 \
+  --front  imges/sample1_front.jpg \
+  --side   imges/sample1_side.jpg \
+  --height 136 \
   --gender male \
   --garment traditional \
-  --output output/client_001.json \
+  --output output_sample1.json \
   --verbose
 ```
 
 ### Via `python -m`
 
 ```bash
-python -m tailorvision measure --front front.jpg --side side.jpg --height 175
+python -m tailorvision measure --front imges/sample1_front.jpg --side imges/sample1_side.jpg --height 136
 ```
 
 ---
