@@ -262,16 +262,32 @@ The main command is `tailor-vision measure` (available after `pip install -e .`)
 #### Full Command with All Options
 
 ```bash
-tailor-vision measure \
-  --front   <path/to/front_image.jpg> \
-  --side    <path/to/side_image.jpg>  \
-  --height  <height_in_cm>            \
-  --gender  <male|female|neutral>     \
-  --garment <traditional|suit|shirt|trousers> \
-  --output  <path/to/output.json>     \
-  --device  <cpu|cuda>                \
-  --model-dir <path/to/smplx/models>  \
-  --no-debug                          \
+tailor-vision measure `
+  --front   <path/to/front_image.jpg> `
+  --side    <path/to/side_image.jpg>  `
+  --height  <height_in_cm>            `
+  --gender  <male|female|neutral>     `
+  --garment <traditional|suit|shirt|trousers> `
+  --output  <path/to/output.json>     `
+  --device  <cpu|cuda>                `
+  --model-dir <path/to/smplx/models>  `
+  --no-debug                          `
+  --verbose
+```
+
+Equivalently:
+
+```bash
+python -m tailorvision measure `
+  --front   <path/to/front_image.jpg> `
+  --side    <path/to/side_image.jpg>  `
+  --height  <height_in_cm>            `
+  --gender  <male|female|neutral>     `
+  --garment <traditional|suit|shirt|trousers> `
+  --output  <path/to/output.json>     `
+  --device  <cpu|cuda>                `
+  --model-dir <path/to/smplx/models>  `
+  --no-debug                          `
   --verbose
 ```
 
