@@ -2,7 +2,7 @@
 
 **Professional-grade anthropometric body measurement extraction from two client photos.**
 
-[ProjectLogo](imges/logo1.png)
+(ProjectLogo)[imges/logo1.png]
 
 Built on [SMPL-X](https://github.com/vchoutas/smplx) and [SMPL-Anthropometry](https://github.com/DavidBoja/SMPL-Anthropometry). Designed for traditional garment tailoring — outputs 16 body measurements in centimetres with per-measurement confidence scores and tailoring-specific ease-allowance values.
 
