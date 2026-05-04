@@ -310,50 +310,50 @@ python -m tailorvision measure `
 
 **Minimal (height unknown):**
 ```bash
-python -m tailorvision measure \
-  --front imges/sample1_front.jpg \
+python -m tailorvision measure `
+  --front imges/sample1_front.jpg `
   --side  imges/sample1_side.jpg
 ```
 
 **With known height and gender (recommended):**
 ```bash
-python -m tailorvision measure \
-  --front  imges/sample1_front.jpg \
-  --side   imges/sample1_side.jpg  \
-  --height 136                     \
-  --gender male
+python -m tailorvision measure `
+  --front  imges/sample1_front.jpg `
+  --side   imges/sample1_side.jpg  `
+  --height 136                     `
+  --gender male                    `
 ```
 
 **Full options — traditional garment, save to custom path, verbose:**
 ```bash
-python -m tailorvision measure \
-  --front   imges/sample1_front.jpg \
-  --side    imges/sample1_side.jpg  \
-  --height  136                     \
-  --gender  male                    \
-  --garment traditional             \
-  --output  output_sample1.json     \
+python -m tailorvision measure `
+  --front   imges/sample1_front.jpg `
+  --side    imges/sample1_side.jpg  `
+  --height  136                     `
+  --gender  male                    `
+  --garment traditional             `
+  --output  output_sample1.json     `
   --verbose
 ```
 
 **For a suit with GPU acceleration:**
 ```bash
-python -m tailorvision measure \
-  --front   client_front.jpg \
-  --side    client_side.jpg  \
-  --height  180              \
-  --gender  male             \
-  --garment suit             \
-  --device  cuda             \
+python -m tailorvision measure `
+  --front   client_front.jpg `
+  --side    client_side.jpg  `
+  --height  180              `
+  --gender  male             `
+  --garment suit             `
+  --device  cuda             `
   --output  results/client_suit.json
 ```
 
 **Suppress debug artifacts (no overlay images written):**
 ```bash
-python -m tailorvision measure \
-  --front imges/sample2_front.jpg \
-  --side  imges/sample2_side.jpg  \
-  --height 175                    \
+python -m tailorvision measure `
+  --front imges/sample2_front.jpg `
+  --side  imges/sample2_side.jpg  `
+  --height 175                    `
   --no-debug
 ```
 
